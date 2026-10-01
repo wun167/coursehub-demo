@@ -1,3 +1,4 @@
+# Du lieu gia lap cho CourseHub (Buoi 1)
 students = [
     {"id": "22000001", "name": "Nguyen Minh Anh", "major": "KHDL"},
     {"id": "22000002", "name": "Tran Duc Long", "major": "KHDL"},
@@ -22,16 +23,19 @@ enrollments = [
     {"student_id": "22000001", "course_code": "INT2204"}
 ]
 
+# In ra so cho con lai cua tung hoc phan
 for course in courses:
     remaining = course["capacity"] - course["enrolled"]
     print(course["code"], "- con", remaining, "cho")
 
+# Ham tim sinh vien theo id
 def find_student(student_id):
     for student in students:
         if student["id"] == student_id:
             return student
     return None
 
+# Ham tim hoc phan theo ma
 def find_course(course_code):
     for course in courses:
         if course["code"] == course_code:
@@ -40,6 +44,7 @@ def find_course(course_code):
 
 print(find_course("INT2204"))
 
+# Ham kiem tra xem co dang ky duoc khong
 def can_enroll(student_id, course_code):
     course = find_course(course_code)
     if course is None:
@@ -56,6 +61,7 @@ def can_enroll(student_id, course_code):
 
 print(can_enroll("22000002", "INT2204"))
 
+# Ham tim kiem mon hoc theo tu khoa
 def search_courses(keyword):
     normalized = keyword.strip().lower()
     results = []
@@ -68,18 +74,23 @@ def search_courses(keyword):
 
 print(search_courses("web"))
 
+# Bai tap tu luyen: Ham dang ky hoc phan cho sinh vien
 def enroll_student(student_id, course_code):
+    # 1. Kiem tra sv co ton tai khong
     student = find_student(student_id)
     if student is None:
         return False, "Ma sinh vien khong ton tai"
 
+    # 2. Kiem tra mon hoc co ton tai khong
     course = find_course(course_code)
     if course is None:
         return False, "Ma hoc phan khong ton tai"
 
+    # 3. Kiem tra xem lop da day chua
     if course["enrolled"] >= course["capacity"]:
         return False, "Lop da du so luong"
 
+    # 4. Kiem tra xem da dang ky mon nay bao gio chua
     duplicated = any(
         item["student_id"] == student_id and item["course_code"] == course_code
         for item in enrollments
@@ -87,11 +98,13 @@ def enroll_student(student_id, course_code):
     if duplicated:
         return False, "Sinh vien da dang ky hoc phan nay"
 
+    # Neu thoa man het thi them vao danh sach va tang so luong
     enrollments.append({"student_id": student_id, "course_code": course_code})
     course["enrolled"] += 1
 
     return True, "Dang ky thanh cong"
 
+# Test thu 5 truong hop
 print(enroll_student("22000002", "INT2204"))
 print(enroll_student("22000001", "INT2204"))
 print(enroll_student("22000001", "INT2205"))
