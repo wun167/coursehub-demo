@@ -1,19 +1,21 @@
 from __future__ import annotations
+
 import logging
+
 from fastapi import FastAPI, HTTPException, Query, Response, status
-from fastapi import Query
 from sqlalchemy import text
-from sqlalchemy.exc import SQLAlchemyError
-from .database import engine
+from sqlalchemy.exc import IntegrityError, SQLAlchemyError
+
 from . import schemas
+from .database import engine
 from .schemas import EnrollmentCreate
-from fastapi import Query
+
 logger = logging.getLogger(__name__)
 
 app = FastAPI(
     title="CourseHub API",
-    version="0.3.0",
-    description="API thuc hanh Buoi 3 Co so du lieu Web va he thong thong tin",
+    version="0.4.0",
+    description="API thuc hanh Buoi 4 - transaction, locking va hieu nang",
 )
 
 # 1. Health Check
@@ -132,48 +134,186 @@ def list_lecturers():
         result = conn.execute(text(sql))
         return [dict(row._mapping) for row in result]
 
-# 6. Đăng ký học phần mới (POST)
+# 6. Đăng ký học phần mới (POST) - khóa dòng lớp để tránh race condition
 @app.post("/enrollments", status_code=status.HTTP_201_CREATED)
 def create_enrollment(payload: EnrollmentCreate) -> dict[str, str]:
     student_sql = "SELECT id FROM students WHERE id = :student_id"
-    section_sql = """
-        SELECT cs.id, cs.capacity, COUNT(e.student_id) AS enrolled
-        FROM class_sections AS cs
-        LEFT JOIN enrollments AS e ON e.class_section_id = cs.id
-        WHERE cs.id = :class_section_id
-        GROUP BY cs.id, cs.capacity
+    lock_section_sql = """
+        SELECT id, capacity
+        FROM class_sections
+        WHERE id = :class_section_id
+        FOR UPDATE
     """
-    duplicate_sql = "SELECT 1 FROM enrollments WHERE student_id = :student_id AND class_section_id = :class_section_id"
-    insert_sql = "INSERT INTO enrollments (student_id, class_section_id) VALUES (:student_id, :class_section_id)"
-    
-    params = {"student_id": payload.student_id, "class_section_id": payload.class_section_id}
-    
-    with engine.begin() as connection:
-        if connection.execute(text(student_sql), {"student_id": payload.student_id}).first() is None:
-            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Khong tim thay sinh vien")
-        
-        section = connection.execute(text(section_sql), {"class_section_id": payload.class_section_id}).mappings().first()
-        if section is None:
-            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Khong tim thay lop hoc phan")
-            
-        if connection.execute(text(duplicate_sql), params).first() is not None:
-            raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Sinh vien da dang ky lop nay")
-            
-        if int(section["enrolled"]) >= int(section["capacity"]):
-            raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Lop hoc phan da het cho")
-            
-        connection.execute(text(insert_sql), params)
-        return {"message": "Dang ky thanh cong", "student_id": payload.student_id, "class_section_id": payload.class_section_id}
+    duplicate_sql = """
+        SELECT 1
+        FROM enrollments
+        WHERE student_id = :student_id
+          AND class_section_id = :class_section_id
+    """
+    count_sql = """
+        SELECT COUNT(*)
+        FROM enrollments
+        WHERE class_section_id = :class_section_id
+    """
+    insert_sql = """
+        INSERT INTO enrollments (student_id, class_section_id)
+        VALUES (:student_id, :class_section_id)
+    """
+    event_sql = """
+        INSERT INTO enrollment_events
+            (student_id, class_section_id, event_type, source, dataset)
+        VALUES
+            (:student_id, :class_section_id, 'CREATED', 'api', 'demo')
+    """
+    parameters = {
+        "student_id": payload.student_id,
+        "class_section_id": payload.class_section_id,
+    }
 
-# 7. Hủy đăng ký học phần (DELETE)
-@app.delete("/enrollments/{student_id}/{class_section_id}", status_code=status.HTTP_204_NO_CONTENT)
+    try:
+        with engine.begin() as connection:
+            student = connection.execute(
+                text(student_sql),
+                {"student_id": payload.student_id},
+            ).first()
+            if student is None:
+                raise HTTPException(
+                    status_code=status.HTTP_404_NOT_FOUND,
+                    detail="Khong tim thay sinh vien",
+                )
+
+            # Khóa dòng lớp học phần: mọi đăng ký cùng lớp xếp hàng tại đây
+            section = connection.execute(
+                text(lock_section_sql),
+                {"class_section_id": payload.class_section_id},
+            ).mappings().first()
+            if section is None:
+                raise HTTPException(
+                    status_code=status.HTTP_404_NOT_FOUND,
+                    detail="Khong tim thay lop hoc phan",
+                )
+
+            duplicated = connection.execute(
+                text(duplicate_sql), parameters
+            ).first()
+            if duplicated is not None:
+                raise HTTPException(
+                    status_code=status.HTTP_409_CONFLICT,
+                    detail="Sinh vien da dang ky lop nay",
+                )
+
+            enrolled = connection.execute(
+                text(count_sql),
+                {"class_section_id": payload.class_section_id},
+            ).scalar_one()
+            if int(enrolled) >= int(section["capacity"]):
+                raise HTTPException(
+                    status_code=status.HTTP_409_CONFLICT,
+                    detail="Lop hoc phan da het cho",
+                )
+
+            connection.execute(text(insert_sql), parameters)
+            connection.execute(text(event_sql), parameters)
+    except IntegrityError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="Dang ky xung dot voi du lieu hien tai",
+        ) from exc
+
+    return {
+        "message": "Dang ky thanh cong",
+        "student_id": payload.student_id,
+        "class_section_id": payload.class_section_id,
+    }
+
+
+# 7. Hủy đăng ký học phần (DELETE) - cùng thứ tự khóa với POST, ghi sự kiện CANCELLED
+@app.delete(
+    "/enrollments/{student_id}/{class_section_id}",
+    status_code=status.HTTP_204_NO_CONTENT,
+)
 def delete_enrollment(student_id: str, class_section_id: str) -> Response:
-    sql = "DELETE FROM enrollments WHERE student_id = :student_id AND class_section_id = :class_section_id"
+    lock_section_sql = """
+        SELECT id
+        FROM class_sections
+        WHERE id = :class_section_id
+        FOR UPDATE
+    """
+    delete_sql = """
+        DELETE FROM enrollments
+        WHERE student_id = :student_id
+          AND class_section_id = :class_section_id
+        RETURNING student_id
+    """
+    event_sql = """
+        INSERT INTO enrollment_events
+            (student_id, class_section_id, event_type, source, dataset)
+        VALUES
+            (:student_id, :class_section_id, 'CANCELLED', 'api', 'demo')
+    """
+    parameters = {
+        "student_id": student_id,
+        "class_section_id": class_section_id,
+    }
+
     with engine.begin() as connection:
-        result = connection.execute(text(sql), {"student_id": student_id, "class_section_id": class_section_id})
-        if result.rowcount == 0:
-            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Khong tim thay dang ky can huy")
-        return Response(status_code=status.HTTP_204_NO_CONTENT)
+        section = connection.execute(
+            text(lock_section_sql),
+            {"class_section_id": class_section_id},
+        ).first()
+        if section is None:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Khong tim thay lop hoc phan",
+            )
+
+        deleted = connection.execute(
+            text(delete_sql), parameters
+        ).first()
+        if deleted is None:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Khong tim thay dang ky can huy",
+            )
+
+        connection.execute(text(event_sql), parameters)
+
+    return Response(status_code=status.HTTP_204_NO_CONTENT)
+
+
+# Bài 1 (Buổi 4): lịch sử đăng ký
+@app.get("/enrollment-events")
+def list_enrollment_events(
+    student_id: str | None = None,
+    event_type: str | None = Query(None, pattern="^(CREATED|CANCELLED)$"),
+    skip: int = Query(0, ge=0),
+    limit: int = Query(20, ge=1, le=100),
+) -> list[dict[str, object]]:
+    sql = """
+        SELECT id, student_id, class_section_id, event_type,
+               source, dataset, occurred_at
+        FROM enrollment_events
+        WHERE dataset = 'demo'
+          AND (CAST(:student_id AS VARCHAR) IS NULL OR student_id = :student_id)
+          AND (CAST(:event_type AS VARCHAR) IS NULL OR event_type = :event_type)
+        ORDER BY occurred_at DESC, id DESC
+        LIMIT :limit OFFSET :skip
+    """
+    with engine.connect() as connection:
+        rows = connection.execute(
+            text(sql),
+            {
+                "student_id": student_id,
+                "event_type": event_type,
+                "skip": skip,
+                "limit": limit,
+            },
+        ).mappings().all()
+    return [
+        {**dict(row), "occurred_at": row["occurred_at"].isoformat()}
+        for row in rows
+    ]
+
 
 # Bài 3: Cập nhật sức chứa
 @app.patch("/sections/{section_id}/capacity")
