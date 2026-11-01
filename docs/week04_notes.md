@@ -30,6 +30,41 @@ Nhan xet:
 - Execution Time giam khoang 8.2 lan (8.936 ms -> 1.093 ms); so block doc giam tu 1137 xuong 53. Planning Time tang nhe (0.373 -> 0.576 ms), khong dang ke.
 - So lieu phu thuoc may va cache; khong dung de ket luan ty le tang toc co dinh.
 
+## Bai 1 - API doc lich su dang ky
+- Endpoint: GET /enrollment-events (query: student_id, event_type, skip, limit; limit 1-100; sap xep occurred_at DESC, id DESC; dung bind parameter).
+- Postman (CourseHub_Buoi_4.postman_collection.json):
+  - 11 - co du lieu: ?student_id=22000004&limit=10 -> 200, tra ve mang.
+  - 12 - khong co du lieu: ?student_id=99999999 -> 200, mang rong.
+
+## Bai 2 - Test rollback nhieu bang
+- Script: backend/tests/week04_rollback_test.py (chay: python -m backend.tests.week04_rollback_test).
+- Trong mot transaction: INSERT enrollments thanh cong, sau do INSERT enrollment_events voi event_type = 'INVALID' vi pham CHECK ck_enrollment_events_type.
+- Ket qua: transaction bi ROLLBACK ca hai bang; enrollments truoc = 1, sau = 1 (khong tang); in PASS.
+- (So 1 la dang ky con lai trong RACE-01 tu lan test truoc, khong anh huong ket qua vi chi so sanh truoc/sau.)
+
+## Bai 3 - Chi muc thu hai
+Truy van: dem su kien CREATED cua WEB-01 trong thang 6/2025 (dataset = 'performance'). Ket qua ca hai lan deu 1644 dong.
+
+| | Truoc index | Sau index |
+|---|---|---|
+| Scan type | Bitmap Heap Scan (Bitmap Index Scan tren idx_enrollment_events_dataset_student_time) | Index Only Scan using idx_enrollment_events_section_type_time |
+| Rows Removed by Filter | 6576 | Khong co (ca 5 dieu kien nam trong Index Cond) |
+| Heap Fetches | - | 0 |
+| Buffers | hit=382, read=66 | hit=16 |
+| Planning Time (ms) | 0.443 | 0.170 |
+| Execution Time (ms) | 11.557 | 0.362 |
+
+Index: idx_enrollment_events_section_type_time (dataset, class_section_id, event_type, occurred_at).
+
+Ly do thu tu cot: dataset, class_section_id, event_type la dieu kien so sanh bang nen dat truoc; occurred_at la dieu kien khoang nen dat cuoi de PostgreSQL tim dung vung roi doc lien tiep.
+
+Nhan xet:
+- Truoc index, PostgreSQL dung index cu (dataset, student_id, occurred_at). Index cu chi giup loc dataset va occurred_at, khong co class_section_id va event_type, nen doc ve 8220 dong roi loc bo 6576 dong.
+- Sau index, ca 5 dieu kien nam trong Index Cond, PostgreSQL chi doc dung 1644 dong can dem. Truy van chi dem nen cac cot deu co trong index, dan den Index Only Scan, Heap Fetches = 0, khong can doc bang.
+- Execution Time giam khoang 32 lan (11.557 ms -> 0.362 ms); so block doc giam tu 448 xuong 16.
+- Luu y: so "truoc" co read=66 (lan do dau, du lieu chua nam het trong cache) nen muc tang toc co phan do cache. So lieu phu thuoc may, khong dung de ket luan ty le co dinh.
+- Doi gia: index them dung luong va lam cham INSERT, nen khong tao index cho moi cot.
+
 ## Project nhom - Checkpoint 1 (SmartTrip)
 
 | Noi dung | Cau tra loi | Nguoi thuc hien | Nguoi kiem tra |
