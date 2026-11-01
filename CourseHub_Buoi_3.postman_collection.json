@@ -1,0 +1,300 @@
+{
+  "info": {
+    "name": "CourseHub API - Buoi 3",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "01 - Health",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test(\"Status code la 200\", function () {",
+              "    pm.response.to.have.status(200);",
+              "});",
+              "pm.test(\"Response la JSON\", function () {",
+              "    pm.response.to.be.json;",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/health",
+          "host": ["{{base_url}}"],
+          "path": ["health"]
+        }
+      }
+    },
+    {
+      "name": "02 - List courses",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test(\"Status code la 200\", function () {",
+              "    pm.response.to.have.status(200);",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/courses",
+          "host": ["{{base_url}}"],
+          "path": ["courses"]
+        }
+      }
+    },
+    {
+      "name": "03 - Search courses",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test(\"Status code la 200\", function () {",
+              "    pm.response.to.have.status(200);",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/courses?q=web",
+          "host": ["{{base_url}}"],
+          "path": ["courses"],
+          "query": [
+            {
+              "key": "q",
+              "value": "web"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "04 - Course detail",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test(\"Status code la 200\", function () {",
+              "    pm.response.to.have.status(200);",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/courses/INT2204",
+          "host": ["{{base_url}}"],
+          "path": ["courses", "INT2204"]
+        }
+      }
+    },
+    {
+      "name": "05 - Available sections",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test(\"Status code la 200\", function () {",
+              "    pm.response.to.have.status(200);",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/sections?available_only=true",
+          "host": ["{{base_url}}"],
+          "path": ["sections"],
+          "query": [
+            {
+              "key": "available_only",
+              "value": "true"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "06 - Student enrollments",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test(\"Status code la 200\", function () {",
+              "    pm.response.to.have.status(200);",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/students/22000001/enrollments",
+          "host": ["{{base_url}}"],
+          "path": ["students", "22000001", "enrollments"]
+        }
+      }
+    },
+    {
+      "name": "07 - Create enrollment",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test(\"Status code la 201\", function () {",
+              "    pm.response.to.have.status(201);",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"student_id\": \"22000004\",\n  \"class_section_id\": \"WEB-01\"\n}"
+        },
+        "url": {
+          "raw": "{{base_url}}/enrollments",
+          "host": ["{{base_url}}"],
+          "path": ["enrollments"]
+        }
+      }
+    },
+    {
+      "name": "08 - Create enrollment duplicate",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test(\"Status code la 409\", function () {",
+              "    pm.response.to.have.status(409);",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"student_id\": \"22000004\",\n  \"class_section_id\": \"WEB-01\"\n}"
+        },
+        "url": {
+          "raw": "{{base_url}}/enrollments",
+          "host": ["{{base_url}}"],
+          "path": ["enrollments"]
+        }
+      }
+    },
+    {
+      "name": "09 - Create enrollment validation error",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test(\"Status code la 422\", function () {",
+              "    pm.response.to.have.status(422);",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"student_id\": \"123\"\n}"
+        },
+        "url": {
+          "raw": "{{base_url}}/enrollments",
+          "host": ["{{base_url}}"],
+          "path": ["enrollments"]
+        }
+      }
+    },
+    {
+      "name": "10 - Delete enrollment",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test(\"Status code la 204\", function () {",
+              "    pm.response.to.have.status(204);",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "DELETE",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/enrollments/22000004/WEB-01",
+          "host": ["{{base_url}}"],
+          "path": ["enrollments", "22000004", "WEB-01"]
+        }
+      }
+    }
+  ]
+}
