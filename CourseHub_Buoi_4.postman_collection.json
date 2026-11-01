@@ -1,0 +1,83 @@
+{
+  "info": {
+    "_postman_id": "a751b8fa-5757-4911-aad5-2fcab1bdbe24",
+    "name": "CourseHub API - Buoi 4",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "_exporter_id": "58869564",
+    "_collection_link": "https://go.postman.co/collection/58869564-a751b8fa-5757-4911-aad5-2fcab1bdbe24?source=collection_link"
+  },
+  "item": [
+    {
+      "name": "11 - Enrollment events (co du lieu)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"Status 200\", () => pm.response.to.have.status(200));\npm.test(\"Tra ve mang\", () => pm.expect(pm.response.json()).to.be.an(\"array\"));"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/enrollment-events?student_id=22000004&limit=10",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "enrollment-events"
+          ],
+          "query": [
+            {
+              "key": "student_id",
+              "value": "22000004"
+            },
+            {
+              "key": "limit",
+              "value": "10"
+            }
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "12 - Enrollment events (khong co du lieu)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"Status 200\", () => pm.response.to.have.status(200));\npm.test(\"Tra ve mang\", () => pm.expect(pm.response.json()).to.be.an(\"array\"));\npm.test(\"Khong co du lieu\", () => pm.expect(pm.response.json()).to.have.length(0));"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/enrollment-events?student_id=99999999",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "enrollment-events"
+          ],
+          "query": [
+            {
+              "key": "student_id",
+              "value": "99999999"
+            }
+          ]
+        }
+      },
+      "response": []
+    }
+  ]
+}
