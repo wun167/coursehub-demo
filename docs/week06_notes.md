@@ -32,12 +32,19 @@
 - Neu dung AI: AI goi y COMPOSE_BAKE (khong co tac dung) va cach gan tag image. Da dung cach gan tag, xac minh bang `docker compose ps` (backend healthy) va log backend co POST 201 / DELETE 204.
 
 ## Bai tap
-- Bai 1: da them `test_sections_has_get_method`. Doi thu path trong test de thay CI do roi khoi phuc: (dien sau khi chay CI)
+- Bai 1: da them `test_sections_has_get_method`. Doi thu path trong test de thay CI do roi khoi phuc: job backend do o step "Test backend contract" (Missing API paths: ['/sections-sai']), frontend xanh, docker khong chay; sau git revert thi CI xanh lai
 - Bai 2: loi co kiem soat (sai DB_HOST hoac sai VITE_API_BASE_URL):
   - Log/Network:
   - Cach sua:
 
 ## Pull Request / CI
-- PR:
+- PR: #4 (week06-docker-ci -> main), da merge
 - Reviewer:
-- CI run: pass/fail va nguyen nhan neu fail
+- CI run: pass (run #1 tren PR, run #2 tren main); PR demo do co chu y roi xanh lai sau revert
+
+## Anh minh hoa
+- `docs/imgs/week06_01_ci_xanh_pr4.png` - run #1 va #2 xanh
+- `docs/imgs/week06_02_diff_sai_path.png` - commit doi `/sections` thanh `/sections-sai`
+- `docs/imgs/week06_03_pr_demo_do.png` - PR demo, backend do
+- `docs/imgs/week06_04_log_backend_do.png` - log: Missing API paths: ['/sections-sai']
+- `docs/imgs/week06_05_ci_xanh_lai.png` - sau git revert, 3 job xanh
