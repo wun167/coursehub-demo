@@ -32,7 +32,7 @@
 - Neu dung AI: AI goi y COMPOSE_BAKE (khong co tac dung) va cach gan tag image. Da dung cach gan tag, xac minh bang `docker compose ps` (backend healthy) va log backend co POST 201 / DELETE 204.
 
 ## Bai tap
-- Bai 1: da them `test_sections_has_get_method`. Doi thu path trong test de thay CI do roi khoi phuc: (dien sau khi chay CI)
+- Bai 1: da them `test_sections_has_get_method`. Doi thu path trong test de thay CI do roi khoi phuc: job backend do o step "Test backend contract" (Missing API paths: ['/sections-sai']), frontend xanh, docker khong chay; sau git revert thi CI xanh lai
 - Bai 2: loi co kiem soat (sai DB_HOST hoac sai VITE_API_BASE_URL):
   - Log/Network:
   - Cach sua:
