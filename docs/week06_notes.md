@@ -38,6 +38,13 @@
   - Cach sua:
 
 ## Pull Request / CI
-- PR:
+- PR: #4 (week06-docker-ci -> main), da merge
 - Reviewer:
-- CI run: pass/fail va nguyen nhan neu fail
+- CI run: pass (run #1 tren PR, run #2 tren main); PR demo do co chu y roi xanh lai sau revert
+
+## Anh minh hoa
+- `docs/imgs/week06_01_ci_xanh_pr4.png` - run #1 va #2 xanh
+- `docs/imgs/week06_02_diff_sai_path.png` - commit doi `/sections` thanh `/sections-sai`
+- `docs/imgs/week06_03_pr_demo_do.png` - PR demo, backend do
+- `docs/imgs/week06_04_log_backend_do.png` - log: Missing API paths: ['/sections-sai']
+- `docs/imgs/week06_05_ci_xanh_lai.png` - sau git revert, 3 job xanh
